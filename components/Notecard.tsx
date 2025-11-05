@@ -1,7 +1,7 @@
 // components/NoteCard.tsx
 "use client";
 
-import AIButton from "./AIButton";
+import AIButton from "./AiButton";
 
 type Note = { _id: string; title: string; content: string };
 type NoteCardProps = {

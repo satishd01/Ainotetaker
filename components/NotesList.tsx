@@ -1,7 +1,7 @@
 // components/NotesList.tsx
 "use client";
 import { useState, useEffect } from "react";
-import NoteCard from "./NoteCard";
+import NoteCard from "./Notecard";
 
 type Note = { _id: string; title: string; content: string };
 
