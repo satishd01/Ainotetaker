@@ -1,25 +1,20 @@
-// app/api/auth/register/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/dbConnect";
-import User from "@/models/User";
+import User, { IUser } from "@/models/User";
 import bcrypt from "bcrypt";
-import { registerSchema } from "@/lib/validation";
 
-export async function POST(request: Request) {
-  try {
-    const body = await request.json();
-    const parsed = registerSchema.parse(body);
+export async function POST(req: NextRequest) {
+  const body: { name: string; email: string; password: string } = await req.json();
 
-    await connectDB();
-    const exists = await User.findOne({ email: parsed.email });
-    if (exists) return NextResponse.json({ error: "Email already registered" }, { status: 400 });
+  await connectDB();
 
-    const hash = await bcrypt.hash(parsed.password, 10);
-    const user = await User.create({ name: parsed.name, email: parsed.email, password: hash });
+  const existingUser = await User.findOne({ email: body.email });
+  if (existingUser) return NextResponse.json({ error: "User already exists" }, { status: 400 });
 
-    return NextResponse.json({ ok: true, user: { id: user._id, email: user.email, name: user.name } });
-  } catch (err: any) {
-    if (err?.issues) return NextResponse.json({ error: err.issues }, { status: 422 });
-    return NextResponse.json({ error: err.message || "Server error" }, { status: 500 });
-  }
+  const hashedPassword = await bcrypt.hash(body.password, 10);
+
+  const newUser = new User({ ...body, password: hashedPassword }) as IUser;
+  await newUser.save();
+
+  return NextResponse.json({ message: "User created successfully" });
 }

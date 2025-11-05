@@ -1,16 +1,8 @@
-// lib/nextAuthOptions.ts
 import CredentialsProvider from "next-auth/providers/credentials";
 import { NextAuthOptions } from "next-auth";
 import { connectDB } from "./dbConnect";
 import User, { IUser } from "@/models/User";
 import bcrypt from "bcrypt";
-
-// Define a proper type for session user
-interface SessionUser {
-  id: string;
-  name: string;
-  email: string;
-}
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -23,37 +15,31 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         await connectDB();
 
-        // Type-safe user fetching
-        const user = (await User.findOne({ email: credentials?.email })) as
-          | (IUser & { _id: any })
-          | null;
-
+        // Explicitly type user
+        const user: IUser | null = await User.findOne({ email: credentials?.email });
         if (!user) throw new Error("No user found");
 
         const valid = await bcrypt.compare(credentials!.password, user.password);
         if (!valid) throw new Error("Invalid password");
 
-        return {
-          id: user._id.toString(),
-          name: user.name,
-          email: user.email,
-        } as SessionUser;
-      },
+        // Explicit type cast fixes TS18046
+return {
+  id: (user._id as any).toString(),
+  name: user.name,
+  email: user.email,
+};
+      }
     }),
   ],
-  session: {
-    strategy: "jwt",
-  },
+  session: { strategy: "jwt" },
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
     async jwt({ token, user }) {
-      if (user) {
-        token.id = (user as SessionUser).id;
-      }
+      if (user) token.id = (user as { id: string }).id;
       return token;
     },
     async session({ session, token }) {
-      (session as any).user = { id: token.id } as SessionUser;
+      (session.user as any) = { id: token.id };
       return session;
     },
   },
